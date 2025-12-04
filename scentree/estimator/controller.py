@@ -18,14 +18,10 @@ class EstimatorController(BaseModel):
         estimator_classes (List[Type]): A list of estimator classes to be
             evaluated.
     """
+
     estimator_classes: List[Type] = [RidgeEstimator]
 
-    def get_score(
-        self,
-        X: np.ndarray,
-        y: np.ndarray,
-        estimator: RidgeEstimator
-    ) -> float:
+    def get_score(self, X: np.ndarray, y: np.ndarray, estimator: RidgeEstimator) -> float:
         """
         Compute the score metric using the data provided.
 
@@ -42,16 +38,13 @@ class EstimatorController(BaseModel):
         return score
 
     def get_best_estimator(
-            self,
-            X: np.ndarray,
-            y: np.ndarray,
-            cv: Union[int, _BaseKFold] = 5
-        ) -> RidgeEstimator:
+        self, X: np.ndarray, y: np.ndarray, cv: Union[int, _BaseKFold] = 5
+    ) -> RidgeEstimator:
         """Train and select the best estimator based on R² score.
 
         This method iterates over all estimator classes defined in
         `self.estimator_classes`. Each estimator is trained using its
-        `get_model` method, evaluated on the data using the metric, 
+        `get_model` method, evaluated on the data using the metric,
         and compared to find the best-performing model. The
         estimator achieving the highest score is returned.
 
@@ -81,5 +74,5 @@ class EstimatorController(BaseModel):
                 best_score = copy(score)
         # Evaluate the estimator in the test set
         if estimator_chosen is None:
-            raise ValueError('`estimator_chosen` is None')
+            raise ValueError("`estimator_chosen` is None")
         return estimator_chosen
