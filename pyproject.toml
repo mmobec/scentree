@@ -44,21 +44,33 @@ dev = [
 include-package-data = true
 
 [tool.setuptools.packages.find]
-where = ["."]
 include = ["scentree*"]
+where = ["."]
 
 [tool.black]
+diff = true
 line-length = 100
 skip-string-normalization = false
+verbose = true
+
+[flake8]
+max-line-length = 100
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .venv,
+    *.pyc
 
 [tool.mypy]
-python_version = "3.12"
-disallow_untyped_defs = true
 check_untyped_defs = true
+disallow_untyped_defs = true
+python_version = "3.12"
+strict_optional = true
 warn_return_any = true
 warn_unused_ignores = true
-strict_optional = true
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "scipy.*", "statsmodels.*"]
 ignore_missing_imports = true
+module = ["sklearn.*", "scipy.*", "statsmodels.*"]
