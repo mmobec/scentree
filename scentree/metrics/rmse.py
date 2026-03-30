@@ -1,14 +1,17 @@
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.metrics import mean_squared_error
 from typing import Union
 
 
-def rmse(y_true: Union[np.ndarray, list], y_pred: Union[np.ndarray, list]) -> float:
+def rmse(
+    y_true: Union[NDArray[np.float64], list], y_pred: Union[NDArray[np.float64], list]
+) -> float:
     """Computes the root mean squared error.
 
     Args:
-        y_true (Union[np.ndarray, list]): Real value.
-        y_pred (Union[np.ndarray, list]): Predicted value.
+        y_true (Union[NDArray[np.float64], list]): Real value.
+        y_pred (Union[NDArray[np.float64], list]): Predicted value.
 
     Returns:
         float: Root mean squared error.
