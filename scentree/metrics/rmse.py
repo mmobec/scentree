@@ -13,4 +13,4 @@ def rmse(y_true: Union[np.ndarray, list], y_pred: Union[np.ndarray, list]) -> fl
     Returns:
         float: Root mean squared error.
     """
-    return np.sqrt(mean_squared_error(y_true, y_pred, multioutput="uniform_average"))
+    return float(np.sqrt(mean_squared_error(y_true, y_pred, multioutput="uniform_average")))
