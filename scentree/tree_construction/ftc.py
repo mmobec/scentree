@@ -1,11 +1,28 @@
 import numpy as np
 from copy import copy
+from numpy.typing import NDArray
 from pydantic import BaseModel, Field, model_validator, PrivateAttr
 from scipy.spatial import distance_matrix
 from typing import Dict, List, Optional, Self, Tuple, TypedDict
 
 
 class Graph(TypedDict):
+    """Graph structure representing the scenario tree.
+
+    This dictionary stores the relationship between nodes (identified by
+    integer IDs) and their corresponding `(stage, representative)` pairs,
+    as well as the edges defining the tree structure.
+
+    Attributes:
+        ids (Dict[int, Tuple[Optional[int], Optional[int]]]):
+            Mapping from node IDs to `(stage, representative)` pairs.
+            The root node is typically represented as `(-1, (None, None))`.
+
+        edges (List[Tuple[int, int]]):
+            List of directed edges `(parent_id, child_id)` defining the
+            tree structure.
+    """
+
     ids: Dict[int, Tuple[Optional[int], Optional[int]]]
     edges: List[Tuple[int, int]]
 
@@ -15,7 +32,7 @@ class FTC(BaseModel):
     Obtain clusters accoring to the Forward Tree Construction algorithm (FTC).
 
     Attributes:
-        scenarios (List[np.ndarray]): List of scenarios.
+        scenarios (List[NDArray[np.float64]]): List of scenarios.
         stage_ids (List[int]): List of stages IDs of the stochastic problem.
         num_variables_per_stage (List[int]): Number of random variables per each stage
 
@@ -25,7 +42,7 @@ class FTC(BaseModel):
             scenario_ids (List[int]): Identifiers of the scenarios.
     """
 
-    scenarios: List[np.ndarray]
+    scenarios: List[NDArray[np.float64]]
     stage_ids: List[int]
     num_variables_per_stage: List[int]
     num_trees: Optional[int] = None
@@ -90,13 +107,13 @@ class FTC(BaseModel):
 
     @staticmethod
     def compute_weighted_norm(
-        x: np.ndarray, weights: np.ndarray, r: float, compute_r_root: bool = True
+        x: NDArray[np.float64], weights: NDArray[np.float64], r: float, compute_r_root: bool = True
     ) -> float:
         """Compute weighted norm.
 
         Args:
-            x (np.ndarray): vector containing the data.
-            weights (np.ndarray): vector containing the weights.
+            x (NDArray[np.float64]): vector containing the data.
+            weights (NDArray[np.float64]): vector containing the weights.
             r (float): the exponent.
             compute_r_root (bool, optional): if the r-root is computed at the end. Default to True.
 
@@ -136,10 +153,10 @@ class FTC(BaseModel):
 
     def compute_stages_thresholds(
         self,
-        scenarios: np.ndarray,
+        scenarios: NDArray[np.float64],
         map_stages_columns: Dict[int, Tuple[int, int]],
         full_stage_ids: List[int],
-        probability_scenarios: np.ndarray,
+        probability_scenarios: NDArray[np.float64],
         r: float,
         initial_stage_id_to_cluster: Optional[int],
     ) -> Dict[int, float]:
@@ -151,10 +168,10 @@ class FTC(BaseModel):
         which is then used to calculate distances to the remaining scenarios.
 
         Args:
-            scenarios (np.ndarray): Array containing the data of the scenarios.
+            scenarios (NDArray[np.float64]): Array containing the data of the scenarios.
             map_stages_columns (Dict[int, Tuple[int, int]]): Mapping between stages and columns.
             full_stage_ids (List[int]): List of stages of the stochastic problem.
-            probability_scenarios (np.ndarray): Probability of each scenario.
+            probability_scenarios (NDArray[np.float64]): Probability of each scenario.
             r (float): Exponent used in the weighted norm computation.
             initial_stage_id_to_cluster (Optional[int]): Stage ID from which clustering starts.
 
@@ -163,7 +180,7 @@ class FTC(BaseModel):
         """
 
         dist_rel = 0.8
-        dist_increment = 0
+        dist_increment = 0.0
         threshold_stages = {}
         # Compute the distance matrix taking into account the first stage to cluster
         if initial_stage_id_to_cluster is not None:
@@ -200,14 +217,14 @@ class FTC(BaseModel):
 
     def update_non_clustering_stages(
         self,
-        scenarios: np.ndarray,
+        scenarios: NDArray[np.float64],
         map_stages_columns: Dict[int, Tuple[int, int]],
         full_stage_ids: List[int],
-        prob_scenarios_stages: np.ndarray,
+        prob_scenarios_stages: NDArray[np.float64],
         initial_stage_id_to_cluster: Optional[int],
         tree: Dict[Tuple[int, int], List[int]],
         representatives: Dict[int, List[int]],
-        Scen0: np.ndarray,
+        Scen0: NDArray[np.float64],
         graph: Graph,
     ) -> None:
         """Populate data structures for stages that are not clustered.
@@ -217,15 +234,15 @@ class FTC(BaseModel):
         to clustering (i.e., stages before `initial_stage_id_to_cluster`).
 
         Args:
-            scenarios (np.ndarray): Array containing the data of the scenarios.
+            scenarios (NDArray[np.float64]): Array containing the data of the scenarios.
             map_stages_columns (Dict[int, Tuple[int, int]]): Mapping between stages and columns.
             full_stage_ids (List[int]): List of stages of the stochastic problem.
-            prob_scenarios_stages (np.ndarray): Matrix containing the probability of each
+            prob_scenarios_stages (NDArray[np.float64]): Matrix containing the probability of each
                 scenario at each stage.
             initial_stage_id_to_cluster (Optional[int]): Stage ID from which clustering starts.
             tree (Dict[Tuple[int, int], List[int]]): Dictionary storing clusters for each stage.
             representatives (Dict[int, List[int]]): Representative scenarios for each stage.
-            Scen0 (np.ndarray): The resulting data from the cluster process, i.e, the tree.
+            Scen0 (NDArray[np.float64]): The resulting data from the cluster process, i.e, the tree.
             graph (Graph): The graph representing the tree.
         """
         idx_representative = int(len(self.scenario_ids) / 2) - 1
@@ -257,22 +274,26 @@ class FTC(BaseModel):
         return None
 
     def compute_distance_stage(
-        self, scenarios: np.ndarray, stage_id: int, map_stages_columns: Dict[int, Tuple[int, int]]
-    ) -> np.ndarray:
+        self,
+        scenarios: NDArray[np.float64],
+        stage_id: int,
+        map_stages_columns: Dict[int, Tuple[int, int]],
+    ) -> NDArray[np.float64]:
         """Compute the distance matrix for a given stage.
 
         Args:
-            scenarios (np.ndarray): Array containing the data of the scenarios.
+            scenarios (NDArray[np.float64]): Array containing the data of the scenarios.
             stage_id (int): The stage ID.
             map_stages_columns (Dict[int, Tuple[int, int]]): Mapping between stages and columns.
 
         Returns:
-            np.ndarray: The pairwise distances matrix between scenarios for the given stage.
+            NDArray[np.float64]: The pairwise distances matrix between scenarios for the
+                given stage.
         """
         stage_mapping = map_stages_columns[stage_id]
         ini, end = stage_mapping
         data_filtered = scenarios[:, ini:end]
-        dist_matrix = distance_matrix(data_filtered, data_filtered, p=1)
+        dist_matrix: NDArray[np.float64] = distance_matrix(data_filtered, data_filtered, p=1)
         return dist_matrix
 
     def get_vertex_id(self, graph: Graph, stage_id: int, representative_id: int) -> int:
@@ -297,16 +318,16 @@ class FTC(BaseModel):
 
     def get_representative(
         self,
-        distance: np.ndarray,
-        weights: np.ndarray,
+        distance: NDArray[np.float64],
+        weights: NDArray[np.float64],
         selected_scenario_ids: List[int],
         r: float,
     ) -> int:
         """Return the representative scenario for a given step in a stage.
 
         Args:
-            distance (np.ndarray): The pairwise distances matrix between scenarios.
-            weights (np.ndarray): vector containing the weight of each scenario.
+            distance (NDArray[np.float64]): The pairwise distances matrix between scenarios.
+            weights (NDArray[np.float64]): vector containing the weight of each scenario.
             selected_scenario_ids (List[int]): List of scenario IDs considered
                 for representative selection.
             r (float): Exponent used in the weighted norm computation.
@@ -332,14 +353,17 @@ class FTC(BaseModel):
         return representative
 
     def map_scenarios_to_representatives(
-        self, representative_ids: List[int], selected_scenario_ids: List[int], distance: np.ndarray
+        self,
+        representative_ids: List[int],
+        selected_scenario_ids: List[int],
+        distance: NDArray[np.float64],
     ) -> Dict[int, int]:
         """Relates scenario ids and representatives.
 
         Args:
             representative_ids (List[int]): List of representative scenario IDs.
             selected_scenario_ids (List[int]): List of scenario IDs to assign.
-            distance (np.ndarray): The pairwise distances matrix between scenarios.
+            distance (NDArray[np.float64]): The pairwise distances matrix between scenarios.
 
         Raises:
             ValueError: If there is a mismatch in the shape of objects.
@@ -361,8 +385,8 @@ class FTC(BaseModel):
 
     def update_tree(
         self,
-        scenarios: np.ndarray,
-        Scen0: np.ndarray,
+        scenarios: NDArray[np.float64],
+        Scen0: NDArray[np.float64],
         closest_representative: Dict[int, int],
         selected_scenario_ids: List[int],
         map_stages_columns: Dict[int, Tuple[int, int]],
@@ -371,8 +395,8 @@ class FTC(BaseModel):
         """Build the tree at the given stage.
 
         Args:
-            scenarios (np.ndarray): Array containing the data of the scenarios.
-            Scen0 (np.ndarray): The resulting data from the cluster process, i.e, the tree.
+            scenarios (NDArray[np.float64]): Array containing the data of the scenarios.
+            Scen0 (NDArray[np.float64]): The resulting data from the cluster process, i.e, the tree.
             closest_representative (Dict[int, int]): dictionary containing the relationship
                 scenario - representative.
             selected_scenario_ids (List[int]): List of scenario IDs considered
@@ -391,22 +415,22 @@ class FTC(BaseModel):
 
     def compute_delta_norm_tree(
         self,
-        scenarios: np.ndarray,
+        scenarios: NDArray[np.float64],
         map_stages_columns: Dict[int, Tuple[int, int]],
         stage_id: int,
-        tree_data: np.ndarray,
-        weights: np.ndarray,
+        tree_data: NDArray[np.float64],
+        weights: NDArray[np.float64],
         r: float,
         selected_scenario_ids: Optional[List[int]] = None,
     ) -> float:
         """Compute the weighted norm of the tree once it has been clustered at the given stage.
 
         Args:
-            scenarios (np.ndarray): Array containing the data of the scenarios.
+            scenarios (NDArray[np.float64]): Array containing the data of the scenarios.
             map_stages_columns (Dict[int, Tuple[int, int]]): Mapping between stages and columns.
             stage_id (int): The stage ID.
-            tree_data (np.ndarray): Array representing the clustered tree data.
-            weights (np.ndarray): vector containing the weight of each scenario.
+            tree_data (NDArray[np.float64]): Array representing the clustered tree data.
+            weights (NDArray[np.float64]): vector containing the weight of each scenario.
             r (float): Exponent used in the weighted norm computation.
             selected_scenario_ids (Optional[List[int]]): Subset of scenarios IDs to consider.
 
@@ -429,7 +453,7 @@ class FTC(BaseModel):
 
     def update_probability(
         self,
-        probability_matrix: np.ndarray,
+        probability_matrix: NDArray[np.float64],
         stage_ids: List[int],
         stage_id: int,
         tree: Dict[Tuple[int, int], List[int]],
@@ -438,7 +462,8 @@ class FTC(BaseModel):
         """Update scenario probabilities at a given stage after clustering.
 
         Args:
-            probability_matrix (np.ndarray): Probability matrix for all scenarios and all stages.
+            probability_matrix (NDArray[np.float64]): Probability matrix for all scenarios
+                and all stages.
             stage_ids (List[int]): List containing all stage IDs.
             stage_id (int): The stage ID.
             tree (Dict[Tuple[int, int], List[int]]): Dictionary storing clusters for each stage.
@@ -483,31 +508,31 @@ class FTC(BaseModel):
 
     def update_stage(
         self,
-        scenarios: np.ndarray,
+        scenarios: NDArray[np.float64],
         map_stages_columns: Dict[int, Tuple[int, int]],
         stage_ids: List[int],
         stage_id: int,
         representatives: Dict[int, List[int]],
         tree: Dict[Tuple[int, int], List[int]],
         graph: Graph,
-        Scen0: np.ndarray,
-        prob_scenarios_stages: np.ndarray,
-        distance_stage: np.ndarray,
+        Scen0: NDArray[np.float64],
+        prob_scenarios_stages: NDArray[np.float64],
+        distance_stage: NDArray[np.float64],
     ) -> None:
         """Update a whole stage so that the norm is lower than the treshold.
 
         Args:
-            scenarios (np.ndarray): Array containing the data of the scenarios.
+            scenarios (NDArray[np.float64]): Array containing the data of the scenarios.
             map_stages_columns (Dict[int, Tuple[int, int]]): Mapping between stages and columns.
             stage_ids (List[int]): List containing all stage IDs.
             stage_id (int): the stage ID.
             representatives (Dict[int, List[int]]): Representative scenario IDs for each stage.
             tree (Dict[Tuple[int, int], List[int]]): Dictionary storing clusters for each stage.
             graph (Graph): The graph representing the tree.
-            Scen0 (np.ndarray): The resulting data from the cluster process, i.e, the tree.
-            prob_scenarios_stages (np.ndarray): Matrix containing the probability of each
+            Scen0 (NDArray[np.float64]): The resulting data from the cluster process, i.e, the tree.
+            prob_scenarios_stages (NDArray[np.float64]): Matrix containing the probability of each
                 scenario at each stage.
-            distance_stage: (np.ndarray): Matrix distance for the given stage_id.
+            distance_stage: (NDArray[np.float64]): Matrix distance for the given stage_id.
         """
         # Select a cluster with more than 1 scenario
         clusters = representatives[stage_id]
@@ -649,7 +674,7 @@ class FTC(BaseModel):
         # Initial parameters
         num_random_variables = self.scenarios[0].shape[1]
         graph: Graph = {"edges": [], "ids": {}}
-        representatives = {}
+        representatives: Dict[int, List[int]] = {}
         Scen0 = np.full(
             shape=(self.num_scenarios, num_random_variables),
             fill_value=np.nan,
@@ -659,7 +684,7 @@ class FTC(BaseModel):
         map_stages_columns = self.mapping_stages_columns()
         stage_ids_with_initial_stage = list(map_stages_columns.keys())
         for i_tree in range(self.num_trees):
-            tree_information = dict()
+            tree_information: Dict[Tuple[int, int], List[int]] = dict()
             current_scenarios = self.scenarios[i_tree]
             prob_scenarios_stages = np.full(
                 shape=(self.num_scenarios, len(stage_ids_with_initial_stage)),
