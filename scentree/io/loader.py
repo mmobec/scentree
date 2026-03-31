@@ -181,11 +181,8 @@ class DatasetLoader(BaseModel):
             StageWiseLoader: A new instance of `StageWiseLoader` containing
                 the stage-wise data and stage names.
         """
-        stage_names = [name for name in self.datasets_information.keys()]
 
-        stage_loader = StageWiseLoader(
-            data=self.stage_data, stage_ids=self.stage_ids, stage_names=stage_names
-        )
+        stage_loader = StageWiseLoader(data=self.stage_data, stage_ids=self.stage_ids)
         return stage_loader
 
 
@@ -203,7 +200,7 @@ class StageWiseLoader(BaseModel):
             each matrix contains the variables for that stage. All matrices
             must have the same number of rows.
         stage_names (Optional[List[str]]): Optional list of names for each
-            stage. Must have the same length as `data` if provided.
+            stage.
     """
 
     data: List[NDArray[np.float64]]
@@ -237,25 +234,19 @@ class StageWiseLoader(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_stage_ids(self) -> Self:
-        if len(self.stage_ids) != len(self.data):
-            raise ValueError("`data` and `stage_ids` must be of the same length")
-        return self
-
-    @model_validator(mode="after")
     def validate_stage_names(self) -> Self:
         """
-        Validate that `stage_names` has the same length as `data`.
+        Validate that `stage_names` has the same length as `stage_ids`.
 
         Raises:
             ValueError: If `stage_names` is provided and its length does
-                not match the number of stages in `data`.
+                not match `stage_ids
 
         Returns:
             Self: The validated model instance.
         """
-        if self.stage_names is not None and len(self.stage_names) != len(self.data):
-            raise ValueError("`data` and `stage_names` must be of the same length")
+        if self.stage_names is not None and len(self.stage_names) != len(self.stage_ids):
+            raise ValueError("`stage_names` and `stage_ids` must be of the same length")
         return self
 
     @model_validator(mode="after")

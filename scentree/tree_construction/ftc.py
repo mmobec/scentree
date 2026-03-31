@@ -672,18 +672,18 @@ class FTC(BaseModel):
         if r < 0:
             raise ValueError("`r` must be greater than 0")
         # Initial parameters
-        num_random_variables = self.scenarios[0].shape[1]
-        graph: Graph = {"edges": [], "ids": {}}
-        representatives: Dict[int, List[int]] = {}
-        Scen0 = np.full(
-            shape=(self.num_scenarios, num_random_variables),
-            fill_value=np.nan,
-            dtype=np.float64,
-        )
+        num_random_variables = sum(self.num_variables_per_stage)
         # Get the initial column position and the last column position of the data for each stage
         map_stages_columns = self.mapping_stages_columns()
         stage_ids_with_initial_stage = list(map_stages_columns.keys())
         for i_tree in range(self.num_trees):
+            graph: Graph = {"edges": [], "ids": {}}
+            representatives: Dict[int, List[int]] = {}
+            Scen0 = np.full(
+                shape=(self.num_scenarios, num_random_variables),
+                fill_value=np.nan,
+                dtype=np.float64,
+            )
             tree_information: Dict[Tuple[int, int], List[int]] = dict()
             current_scenarios = self.scenarios[i_tree]
             prob_scenarios_stages = np.full(
@@ -855,5 +855,5 @@ class FTC(BaseModel):
                             r,
                         )
             results.append(tree_information)
-        self.update_graph(graph)
+            self.update_graph(graph)
         return results
