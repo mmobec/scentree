@@ -1,0 +1,17 @@
+from typing import List, Optional, TypedDict
+
+
+class MapColumns(TypedDict):
+    """
+    Mapping between a dataset and the ordering of its columns.
+
+    Attributes:
+        dataset: Name of the dataset.
+        columns: List of column indices defining their order.
+    """
+
+    dataset: str
+    columns: List[int]
+
+
+MapColsNames = Optional[List[MapColumns]]
