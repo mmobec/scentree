@@ -1,16 +1,11 @@
-import logging
 import numpy as np
-import os
 from copy import copy
-from datetime import datetime
 from numpy.typing import NDArray
-from pathlib import Path
 from pydantic import BaseModel, Field, model_validator, PrivateAttr
+from scentree.tree_construction import Node, Tree, TreeInfoMap
 from scipy.spatial import distance_matrix
-from typing import Dict, List, Optional, Self, Tuple, TypedDict, Union
+from typing import Dict, List, Optional, Self, Tuple, TypedDict
 
-
-logger = logging.getLogger(__name__)
 
 class Graph(TypedDict):
     """Graph structure representing the scenario tree.
@@ -228,7 +223,7 @@ class FTC(BaseModel):
         full_stage_ids: List[int],
         prob_scenarios_stages: NDArray[np.float64],
         initial_stage_id_to_cluster: Optional[int],
-        tree: Dict[Tuple[int, int], List[int]],
+        tree: TreeInfoMap,
         representatives: Dict[int, List[int]],
         Scen0: NDArray[np.float64],
         graph: Graph,
@@ -246,7 +241,7 @@ class FTC(BaseModel):
             prob_scenarios_stages (NDArray[np.float64]): Matrix containing the probability of each
                 scenario at each stage.
             initial_stage_id_to_cluster (Optional[int]): Stage ID from which clustering starts.
-            tree (Dict[Tuple[int, int], List[int]]): Dictionary storing clusters for each stage.
+            tree (TreeInfoMap): Dictionary storing clusters for each stage.
             representatives (Dict[int, List[int]]): Representative scenarios for each stage.
             Scen0 (NDArray[np.float64]): The resulting data from the cluster process, i.e, the tree.
             graph (Graph): The graph representing the tree.
@@ -462,7 +457,7 @@ class FTC(BaseModel):
         probability_matrix: NDArray[np.float64],
         stage_ids: List[int],
         stage_id: int,
-        tree: Dict[Tuple[int, int], List[int]],
+        tree: TreeInfoMap,
         representatives: Dict[int, List[int]],
     ) -> None:
         """Update scenario probabilities at a given stage after clustering.
@@ -472,7 +467,7 @@ class FTC(BaseModel):
                 and all stages.
             stage_ids (List[int]): List containing all stage IDs.
             stage_id (int): The stage ID.
-            tree (Dict[Tuple[int, int], List[int]]): Dictionary storing clusters for each stage.
+            tree (TreeInfoMap): Dictionary storing clusters for each stage.
             representatives (Dict[int, List[int]]): Representative scenario IDs for each stage.
         """
         total_scenarios = len(self.scenario_ids)
@@ -519,7 +514,7 @@ class FTC(BaseModel):
         stage_ids: List[int],
         stage_id: int,
         representatives: Dict[int, List[int]],
-        tree: Dict[Tuple[int, int], List[int]],
+        tree: TreeInfoMap,
         graph: Graph,
         Scen0: NDArray[np.float64],
         prob_scenarios_stages: NDArray[np.float64],
@@ -533,7 +528,7 @@ class FTC(BaseModel):
             stage_ids (List[int]): List containing all stage IDs.
             stage_id (int): the stage ID.
             representatives (Dict[int, List[int]]): Representative scenario IDs for each stage.
-            tree (Dict[Tuple[int, int], List[int]]): Dictionary storing clusters for each stage.
+            tree (TreeInfoMap): Dictionary storing clusters for each stage.
             graph (Graph): The graph representing the tree.
             Scen0 (NDArray[np.float64]): The resulting data from the cluster process, i.e, the tree.
             prob_scenarios_stages (NDArray[np.float64]): Matrix containing the probability of each
@@ -645,27 +640,49 @@ class FTC(BaseModel):
         graph["edges"] = new_edges
         return None
 
-    def save_json(self, output_dir: Union[str, Path]) -> None:
-        output_dir = Path(output_dir)
-        if not output_dir.exists():
-            raise FileNotFoundError(f"Directory {output_dir} does not exist")
+    def combine_tree_graph(self, graph: Graph, tree: TreeInfoMap) -> Tree:
+        """
+        Build a tree structure by combining a graph representation with scenario
+        information.
 
-        if not output_dir.is_dir():
-            raise NotADirectoryError(f"{output_dir} is not a directory")
+        Args:
+            graph (Graph): A graph structure.
+            tree (TreeInfoMap): Mapping from (stage, representative) tuples to
+                scenario ID lists.
 
-        base_name = datetime.now().strftime("results_%Y%m%d_%H%M%S")
-        new_dir = output_dir / base_name
-        counter = 1
-        while new_dir.exists():
-            new_dir = output_dir / f"{base_name}_{counter}"
-            counter += 1
-        new_dir.mkdir()
-        logger.info(f"Results saved in {new_dir}")
-        return None
+        Returns:
+            Tree: A list of nodes representing the constructed tree structure.
+        """
+        results = []
+        new_map: Dict[int, Tuple[Optional[int], int]] = dict()
+        counter_stage: Dict[Optional[int], int] = dict()
+        ids = graph["ids"]
+        for current_id, (stage, _) in ids.items():
+            if stage in counter_stage.keys():
+                counter = counter_stage[stage] + 1
+            else:
+                counter = 1
+            counter_stage[stage] = counter
+            new_map[current_id] = (stage, counter)
+        edges = graph["edges"]
+        for parent_id, child_id in edges:
+            key = new_map[child_id]
+            child_stage, child_representative = graph["ids"][child_id]
+            assert child_stage is not None and child_representative is not None
+            scenario_ids = tree[(child_stage, child_representative)]
+            parent_key = new_map[parent_id]
+            current_info: Node = {
+                "key": key,
+                "scenario_ids": scenario_ids,
+                "parent_key": parent_key if parent_key[0] is not None else None,
+                "description": f"Stage {key[0]}, cluster {key[1]}",
+            }
+            results.append(current_info)
+        return results
 
     def generate_trees(
         self, r: float, initial_stage_id_to_cluster: Optional[int] = None
-    ) -> List[Dict]:
+    ) -> List[Tree]:
         """Build the scenario tree.
 
         Args:
@@ -673,12 +690,15 @@ class FTC(BaseModel):
             initial_stage_id_to_cluster (Optional[int]): Stage ID from which clustering starts.
                 Default to None, which means that no clustering is performed.
 
+        Raises:
+            ValueError: If `initial_stage_id_to_cluster` is not a valid stage_id.
+            ValueError: If `r` is negative or zero.
         Returns:
-            None.
+            List[Tree]: The trees.
         """
         # If initial_stage_id_to_cluster is None means that the data of all
         # stages have been observed, i.e., no clustering is performed.
-        results = []
+        results: List[Tree] = []
         # Initial checks
         if (
             initial_stage_id_to_cluster is not None
@@ -693,7 +713,7 @@ class FTC(BaseModel):
             raise ValueError("Provide a value for `num_scenarios` when creating the object")
         if self.num_trees is None:
             raise ValueError("`num_trees` must be provided")
-        if r < 0:
+        if r <= 0:
             raise ValueError("`r` must be greater than 0")
         # Initial parameters
         num_random_variables = sum(self.num_variables_per_stage)
@@ -708,7 +728,7 @@ class FTC(BaseModel):
                 fill_value=np.nan,
                 dtype=np.float64,
             )
-            tree_information: Dict[Tuple[int, int], List[int]] = dict()
+            tree_information: TreeInfoMap = dict()
             current_scenarios = self.scenarios[i_tree]
             prob_scenarios_stages = np.full(
                 shape=(self.num_scenarios, len(stage_ids_with_initial_stage)),
@@ -878,6 +898,7 @@ class FTC(BaseModel):
                             probability_scenarios,
                             r,
                         )
-            results.append(tree_information)
             self.update_graph(graph)
+            combined_tree = self.combine_tree_graph(graph, tree_information)
+            results.append(combined_tree)
         return results
