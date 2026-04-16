@@ -14,4 +14,5 @@ class MapColumns(TypedDict):
     columns: List[int]
 
 
+# Optional list of dataset-to-column mappings
 MapColsNames = Optional[List[MapColumns]]
