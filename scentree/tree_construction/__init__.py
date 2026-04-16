@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, TypedDict, Union
+from typing import Dict, List, Optional, Tuple, TypedDict, Union
 
 
 class Node(TypedDict):
@@ -18,9 +18,9 @@ class Node(TypedDict):
         description (str): Human-readable description of the node.
     """
 
-    key: Tuple[int, int]
+    key: Tuple[Optional[int], int]
     scenario_ids: List[int]
-    parent_key: Union[Tuple[int, int], None]
+    parent_key: Union[Tuple[Optional[int], Optional[int]], None]
     description: str
 
 
