@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel, Field, model_validator
-from scentree.io import MapColumns, MapColsNames
+from scentree.io import MapColumnsStages, MapColsNamesStages
 from typing import Dict, List, Optional, Self
 
 
@@ -379,7 +379,7 @@ class StageWiseLoader(BaseModel):
         """
         return np.concatenate(self.data, axis=1)
 
-    def build_stages_columns_mapping(self) -> MapColsNames:
+    def build_stages_columns_mapping(self) -> MapColsNamesStages:
         """
         Build a mapping between dataset names and their column indices.
 
@@ -398,17 +398,27 @@ class StageWiseLoader(BaseModel):
         """
         results = None
         if self.mapping_columns_stages is not None:
-            i = 0
+            i_column = 0
+            idx_stage = 0
             results = []
-            dict_mapping: Dict[str, List[int]] = {}
+            dict_mapping_columns: Dict[str, List[int]] = {}
+            dict_mapping_stages: Dict[str, List[int]] = {}
             for stage_names in self.mapping_columns_stages:
                 for name in stage_names:
-                    if name in dict_mapping.keys():
-                        dict_mapping[name].append(i)
+                    stage_id = self.stage_ids[idx_stage]
+                    if name in dict_mapping_columns.keys():
+                        dict_mapping_columns[name].append(i_column)
+                        dict_mapping_stages[name].append(stage_id)
                     else:
-                        dict_mapping[name] = [i]
-                    i += 1
-            for name in dict_mapping.keys():
-                res_dict: MapColumns = {"dataset": name, "columns": dict_mapping[name]}
+                        dict_mapping_columns[name] = [i_column]
+                        dict_mapping_stages[name] = [stage_id]
+                    i_column += 1
+                idx_stage += 1
+            for name in dict_mapping_columns.keys():
+                res_dict: MapColumnsStages = {
+                    "dataset": name,
+                    "columns": dict_mapping_columns[name],
+                    "stages": dict_mapping_stages[name],
+                }
                 results.append(res_dict)
         return results
