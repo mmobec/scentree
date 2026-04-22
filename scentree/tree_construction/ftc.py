@@ -640,7 +640,7 @@ class FTC(BaseModel):
         graph["edges"] = new_edges
         return None
 
-    def combine_tree_graph(self, graph: Graph, tree: TreeInfoMap) -> Tree:
+    def combine_tree_graph(self, graph: Graph, tree: TreeInfoMap, probabilities: NDArray) -> Tree:
         """
         Build a tree structure by combining a graph representation with scenario
         information.
@@ -653,7 +653,7 @@ class FTC(BaseModel):
         Returns:
             Tree: A list of nodes representing the constructed tree structure.
         """
-        results = []
+        nodes: List[Node] = []
         new_map: Dict[int, Tuple[Optional[int], int]] = dict()
         counter_stage: Dict[Optional[int], int] = dict()
         ids = graph["ids"]
@@ -677,7 +677,8 @@ class FTC(BaseModel):
                 "parent_key": parent_key if parent_key[0] is not None else None,
                 "description": f"Stage {key[0]}, cluster {key[1]}",
             }
-            results.append(current_info)
+            nodes.append(current_info)
+        results: Tree = (probabilities, nodes)
         return results
 
     def generate_trees(
@@ -899,6 +900,8 @@ class FTC(BaseModel):
                             r,
                         )
             self.update_graph(graph)
-            combined_tree = self.combine_tree_graph(graph, tree_information)
+            combined_tree = self.combine_tree_graph(
+                graph, tree_information, prob_scenarios_stages[:, -1]
+            )
             results.append(combined_tree)
         return results
