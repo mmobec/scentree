@@ -2,7 +2,7 @@ import numpy as np
 from copy import copy
 from numpy.typing import NDArray
 from pydantic import BaseModel, Field, model_validator, PrivateAttr
-from scentree.tree_construction import Node, Tree, TreeInfoMap
+from scentree.tree_construction import Node, NodeScenarioMap, ScenarioTrees, Tree
 from scipy.spatial import distance_matrix
 from typing import Dict, List, Optional, Self, Tuple, TypedDict
 
@@ -223,16 +223,16 @@ class FTC(BaseModel):
         full_stage_ids: List[int],
         prob_scenarios_stages: NDArray[np.float64],
         initial_stage_id_to_cluster: Optional[int],
-        tree: TreeInfoMap,
+        node_scenario_map: NodeScenarioMap,
         representatives: Dict[int, List[int]],
         Scen0: NDArray[np.float64],
         graph: Graph,
     ) -> None:
         """Populate data structures for stages that are not clustered.
 
-        This method updates the tree, representatives, scenario matrix (`Scen0`),
-        probability matrix, and graph structure for stages that are not subject
-        to clustering (i.e., stages before `initial_stage_id_to_cluster`).
+        This method updates the tree-like structure (node_scenario_map), representatives,
+        scenario matrix (`Scen0`), probability matrix, and graph structure for stages
+        that are not subject to clustering (i.e., stages before `initial_stage_id_to_cluster`).
 
         Args:
             scenarios (NDArray[np.float64]): Array containing the data of the scenarios.
@@ -241,9 +241,9 @@ class FTC(BaseModel):
             prob_scenarios_stages (NDArray[np.float64]): Matrix containing the probability of each
                 scenario at each stage.
             initial_stage_id_to_cluster (Optional[int]): Stage ID from which clustering starts.
-            tree (TreeInfoMap): Dictionary storing clusters for each stage.
+            node_scenario_map (NodeScenarioMap): Dictionary storing clusters for each stage.
             representatives (Dict[int, List[int]]): Representative scenarios for each stage.
-            Scen0 (NDArray[np.float64]): The resulting data from the cluster process, i.e, the tree.
+            Scen0 (NDArray[np.float64]): The resulting data from the cluster process.
             graph (Graph): The graph representing the tree.
         """
         idx_representative = int(len(self.scenario_ids) / 2) - 1
@@ -259,13 +259,13 @@ class FTC(BaseModel):
         graph["ids"][predecessor_id] = (None, None)
         for i_stage, stage in enumerate(non_clustering_stages):
             key = (stage, scenario_representative)
-            tree[key] = self.scenario_ids[:]
+            node_scenario_map[key] = self.scenario_ids[:]
             representatives[stage] = [scenario_representative]
             stage_mapping = map_stages_columns[stage]
             ini = stage_mapping[0]
             end = stage_mapping[1]
             Scen0[:, ini:end] = scenarios[:, ini:end]
-            prob_scenarios_stages[idx_representative, i_stage] = len(tree[key]) / len(
+            prob_scenarios_stages[idx_representative, i_stage] = len(node_scenario_map[key]) / len(
                 self.scenario_ids
             )
             graph["ids"][current_id] = key
@@ -384,7 +384,7 @@ class FTC(BaseModel):
             scenario_to_representative[sc] = sc if sc in representative_ids else rep
         return scenario_to_representative
 
-    def update_tree(
+    def update_data(
         self,
         scenarios: NDArray[np.float64],
         Scen0: NDArray[np.float64],
@@ -393,11 +393,11 @@ class FTC(BaseModel):
         map_stages_columns: Dict[int, Tuple[int, int]],
         stage_id: int,
     ) -> None:
-        """Build the tree at the given stage.
+        """Update the data once the cluster is obtained.
 
         Args:
             scenarios (NDArray[np.float64]): Array containing the data of the scenarios.
-            Scen0 (NDArray[np.float64]): The resulting data from the cluster process, i.e, the tree.
+            Scen0 (NDArray[np.float64]): The resulting data from the cluster process.
             closest_representative (Dict[int, int]): dictionary containing the relationship
                 scenario - representative.
             selected_scenario_ids (List[int]): List of scenario IDs considered
@@ -419,7 +419,7 @@ class FTC(BaseModel):
         scenarios: NDArray[np.float64],
         map_stages_columns: Dict[int, Tuple[int, int]],
         stage_id: int,
-        tree_data: NDArray[np.float64],
+        Scen0: NDArray[np.float64],
         weights: NDArray[np.float64],
         r: float,
         selected_scenario_ids: Optional[List[int]] = None,
@@ -430,7 +430,7 @@ class FTC(BaseModel):
             scenarios (NDArray[np.float64]): Array containing the data of the scenarios.
             map_stages_columns (Dict[int, Tuple[int, int]]): Mapping between stages and columns.
             stage_id (int): The stage ID.
-            tree_data (NDArray[np.float64]): Array representing the clustered tree data.
+            Scen0 (NDArray[np.float64]): The resulting data from the cluster process.
             weights (NDArray[np.float64]): vector containing the weight of each scenario.
             r (float): Exponent used in the weighted norm computation.
             selected_scenario_ids (Optional[List[int]]): Subset of scenarios IDs to consider.
@@ -444,7 +444,7 @@ class FTC(BaseModel):
         stage_mapping = map_stages_columns[stage_id]
         ini, end = stage_mapping
         scenarios_stage = scenarios[idx_scenarios, ini:end]
-        tree_stage = tree_data[idx_scenarios, ini:end]
+        tree_stage = Scen0[idx_scenarios, ini:end]
         weights_filtered = weights[idx_scenarios]
         diff = np.subtract(scenarios_stage, tree_stage)
         # Compute the norm of the difference for each scenarios
@@ -457,7 +457,7 @@ class FTC(BaseModel):
         probability_matrix: NDArray[np.float64],
         stage_ids: List[int],
         stage_id: int,
-        tree: TreeInfoMap,
+        node_scenario_map: NodeScenarioMap,
         representatives: Dict[int, List[int]],
     ) -> None:
         """Update scenario probabilities at a given stage after clustering.
@@ -467,7 +467,7 @@ class FTC(BaseModel):
                 and all stages.
             stage_ids (List[int]): List containing all stage IDs.
             stage_id (int): The stage ID.
-            tree (TreeInfoMap): Dictionary storing clusters for each stage.
+            node_scenario_map (NodeScenarioMap): Dictionary storing clusters for each stage.
             representatives (Dict[int, List[int]]): Representative scenario IDs for each stage.
         """
         total_scenarios = len(self.scenario_ids)
@@ -476,7 +476,7 @@ class FTC(BaseModel):
         representatives_stage = representatives[stage_id]
         for rep in representatives_stage:
             key = (stage_id, rep)
-            scenarios_representatives = tree[key]
+            scenarios_representatives = node_scenario_map[key]
             total_related_scenarios = len(scenarios_representatives)
             idx_rep = self._scenario_index_map[rep]
             probability_matrix[idx_rep, idx_stage] = total_related_scenarios / total_scenarios
@@ -514,7 +514,7 @@ class FTC(BaseModel):
         stage_ids: List[int],
         stage_id: int,
         representatives: Dict[int, List[int]],
-        tree: TreeInfoMap,
+        node_scenario_map: NodeScenarioMap,
         graph: Graph,
         Scen0: NDArray[np.float64],
         prob_scenarios_stages: NDArray[np.float64],
@@ -528,9 +528,9 @@ class FTC(BaseModel):
             stage_ids (List[int]): List containing all stage IDs.
             stage_id (int): the stage ID.
             representatives (Dict[int, List[int]]): Representative scenario IDs for each stage.
-            tree (TreeInfoMap): Dictionary storing clusters for each stage.
+            node_scenario_map (NodeScenarioMap): Dictionary storing clusters for each stage.
             graph (Graph): The graph representing the tree.
-            Scen0 (NDArray[np.float64]): The resulting data from the cluster process, i.e, the tree.
+            Scen0 (NDArray[np.float64]): The resulting data from the cluster process.
             prob_scenarios_stages (NDArray[np.float64]): Matrix containing the probability of each
                 scenario at each stage.
             distance_stage: (NDArray[np.float64]): Matrix distance for the given stage_id.
@@ -547,7 +547,7 @@ class FTC(BaseModel):
         while i < total_clusters and not found:
             rep = clusters_permutated[i]
             key = (stage_id, rep)
-            scenarios_rep = copy(tree[key])
+            scenarios_rep = copy(node_scenario_map[key])
             total_scenarios = len(scenarios_rep)
             found = total_scenarios > 1
             i += 1
@@ -570,7 +570,7 @@ class FTC(BaseModel):
             distance=distance_stage,
         )
         # Update the data
-        self.update_tree(
+        self.update_data(
             scenarios,
             Scen0,
             closest_representative,
@@ -582,23 +582,23 @@ class FTC(BaseModel):
         edges_related = self.filter_edges_by_vertex(graph, stage_id, rep)
         first_edge = edges_related[0]
         predecessor_id = first_edge[0]
-        if (stage_id, rep) in tree.keys():
+        if (stage_id, rep) in node_scenario_map.keys():
             edges_related = self.filter_edges_by_vertex(graph, stage_id, rep)
             first_edge = edges_related[0]
             predecessor_id = first_edge[0]
             current_id = first_edge[1]
-            del tree[(stage_id, rep)]
+            del node_scenario_map[(stage_id, rep)]
             graph["edges"].remove(first_edge)
             del graph["ids"][current_id]
-        if (stage_id, new_rep) in tree.keys():
+        if (stage_id, new_rep) in node_scenario_map.keys():
             raise ValueError(f"({stage_id}, {new_rep}) should not be an existing key")
         for scen in scenarios_rep:
             rep = closest_representative[scen]
             key = (stage_id, rep)
-            if key in tree.keys():
-                tree[key].append(scen)
+            if key in node_scenario_map.keys():
+                node_scenario_map[key].append(scen)
             else:
-                tree[key] = [scen]
+                node_scenario_map[key] = [scen]
             if key not in graph["ids"].values():
                 current_id = max(graph["ids"].keys()) + 1
                 graph["ids"][current_id] = key
@@ -610,7 +610,9 @@ class FTC(BaseModel):
                 clusters.append(rep)
         representatives[stage_id] = clusters
         # update probabilities
-        self.update_probability(prob_scenarios_stages, stage_ids, stage_id, tree, representatives)
+        self.update_probability(
+            prob_scenarios_stages, stage_ids, stage_id, node_scenario_map, representatives
+        )
 
     def update_graph(self, graph: Graph) -> None:
         """Update the graph that keeps the relationship between scenario IDs
@@ -640,20 +642,20 @@ class FTC(BaseModel):
         graph["edges"] = new_edges
         return None
 
-    def combine_tree_graph(self, graph: Graph, tree: TreeInfoMap, probabilities: NDArray) -> Tree:
+    def combine_tree_graph(self, graph: Graph, node_scenario_map: NodeScenarioMap) -> Tree:
         """
         Build a tree structure by combining a graph representation with scenario
         information.
 
         Args:
             graph (Graph): A graph structure.
-            tree (TreeInfoMap): Mapping from (stage, representative) tuples to
+            node_scenario_map (TreeInfoMap): Mapping from (stage, representative) tuples to
                 scenario ID lists.
 
         Returns:
             Tree: A list of nodes representing the constructed tree structure.
         """
-        nodes: List[Node] = []
+        nodes: Tree = []
         new_map: Dict[int, Tuple[Optional[int], int]] = dict()
         counter_stage: Dict[Optional[int], int] = dict()
         ids = graph["ids"]
@@ -669,7 +671,7 @@ class FTC(BaseModel):
             key = new_map[child_id]
             child_stage, child_representative = graph["ids"][child_id]
             assert child_stage is not None and child_representative is not None
-            scenario_ids = tree[(child_stage, child_representative)]
+            scenario_ids = node_scenario_map[(child_stage, child_representative)]
             parent_key = new_map[parent_id]
             current_info: Node = {
                 "key": key,
@@ -678,13 +680,12 @@ class FTC(BaseModel):
                 "description": f"Stage {key[0]}, cluster {key[1]}",
             }
             nodes.append(current_info)
-        results: Tree = (probabilities, nodes)
-        return results
+        return nodes
 
-    def generate_trees(
+    def generate_scenario_trees(
         self, r: float, initial_stage_id_to_cluster: Optional[int] = None
-    ) -> List[Tree]:
-        """Build the scenario tree.
+    ) -> ScenarioTrees:
+        """Build the scenario trees.
 
         Args:
             r (float): Exponent used in the weighted norm computation.
@@ -699,7 +700,6 @@ class FTC(BaseModel):
         """
         # If initial_stage_id_to_cluster is None means that the data of all
         # stages have been observed, i.e., no clustering is performed.
-        results: List[Tree] = []
         # Initial checks
         if (
             initial_stage_id_to_cluster is not None
@@ -717,6 +717,7 @@ class FTC(BaseModel):
         if r <= 0:
             raise ValueError("`r` must be greater than 0")
         # Initial parameters
+        results: ScenarioTrees = []
         num_random_variables = sum(self.num_variables_per_stage)
         # Get the initial column position and the last column position of the data for each stage
         map_stages_columns = self.mapping_stages_columns()
@@ -729,7 +730,7 @@ class FTC(BaseModel):
                 fill_value=np.nan,
                 dtype=np.float64,
             )
-            tree_information: TreeInfoMap = dict()
+            node_scenario_map: NodeScenarioMap = dict()
             current_scenarios = self.scenarios[i_tree]
             prob_scenarios_stages = np.full(
                 shape=(self.num_scenarios, len(stage_ids_with_initial_stage)),
@@ -755,7 +756,7 @@ class FTC(BaseModel):
                 stage_ids_with_initial_stage,
                 prob_scenarios_stages,
                 initial_stage_id_to_cluster,
-                tree_information,
+                node_scenario_map,
                 representatives,
                 Scen0,
                 graph,
@@ -789,7 +790,7 @@ class FTC(BaseModel):
                         representatives_p_cluster = []
                         predecessor_key = (precedessor_stage_id, p_cluster)
                         predecessor_id = self.get_vertex_id(graph, precedessor_stage_id, p_cluster)
-                        predecessor_scenarios = tree_information[predecessor_key]
+                        predecessor_scenarios = node_scenario_map[predecessor_key]
                         remaining_scenarios = copy(predecessor_scenarios)
                         # Create the new clusters from p_cluster
                         closest_representative = dict()
@@ -810,8 +811,8 @@ class FTC(BaseModel):
                             closest_representative = self.map_scenarios_to_representatives(
                                 representatives_p_cluster, predecessor_scenarios, distance_stage
                             )
-                            # Build the tree
-                            self.update_tree(
+                            # Update the data
+                            self.update_data(
                                 current_scenarios,
                                 Scen0,
                                 closest_representative,
@@ -841,10 +842,10 @@ class FTC(BaseModel):
                         for scen in predecessor_scenarios:
                             rep = closest_representative[scen]
                             key = (stage_id, rep)
-                            if key in tree_information.keys():
-                                tree_information[key].append(scen)
+                            if key in node_scenario_map.keys():
+                                node_scenario_map[key].append(scen)
                             else:
-                                tree_information[key] = [scen]
+                                node_scenario_map[key] = [scen]
                             if key not in graph["ids"].values():
                                 graph["ids"][current_id] = key
                                 graph["edges"].append((predecessor_id, current_id))
@@ -855,7 +856,7 @@ class FTC(BaseModel):
                         prob_scenarios_stages,
                         stage_ids_with_initial_stage,
                         stage_id,
-                        tree_information,
+                        node_scenario_map,
                         representatives,
                     )
                     # Before moving to the next stage, compute the norm of the current stage.
@@ -884,7 +885,7 @@ class FTC(BaseModel):
                             stage_ids_with_initial_stage,
                             stage_id,
                             representatives,
-                            tree_information,
+                            node_scenario_map,
                             graph,
                             Scen0,
                             prob_scenarios_stages,
@@ -900,8 +901,12 @@ class FTC(BaseModel):
                             r,
                         )
             self.update_graph(graph)
-            combined_tree = self.combine_tree_graph(
-                graph, tree_information, prob_scenarios_stages[:, -1]
+            tree = self.combine_tree_graph(graph, node_scenario_map)
+            results.append(
+                {
+                    "tree": tree,
+                    "scenario_probabilities": prob_scenarios_stages[:, -1],
+                    "scenario_tree_data": Scen0,
+                }
             )
-            results.append(combined_tree)
         return results

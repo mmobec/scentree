@@ -27,7 +27,32 @@ class Node(TypedDict):
 
 
 # A tree is a list of nodes.
-Tree = Tuple[NDArray[np.float64], List[Node]]
+Tree = List[Node]
 
 # Mapping for trees.
-TreeInfoMap = Dict[Tuple[int, int], List[int]]
+NodeScenarioMap = Dict[Tuple[int, int], List[int]]
+
+
+class ScenarioTree(TypedDict):
+    """
+    Represents a scenario tree structure used in stochastic programming.
+
+    Attributes:
+        tree (List[Node]):List of nodes defining the tree structure. Each node contains
+            information about its position in the tree, its parent, and the
+            scenarios associated with it.
+
+        scenario_probabilities (NDArray[np.float64]): Array containing the probability
+            of each scenario.
+
+        scenario_tree_data (NDArray[np.float64]): Matrix containing the data associated
+            with each scenario in the tree.
+    """
+
+    tree: List[Node]
+    scenario_probabilities: NDArray[np.float64]
+    scenario_tree_data: NDArray[np.float64]
+
+
+# Collection of trees.
+ScenarioTrees = List[ScenarioTree]
