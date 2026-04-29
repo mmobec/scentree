@@ -8,9 +8,13 @@ from sklearn.preprocessing import StandardScaler
 from typing import List, Optional, TypedDict
 
 
-class ScenariosPayload(TypedDict):
+class ScenarioFanData(TypedDict):
     """
-    Container for scenario generation results.
+    Data container representing a scenario fan in a stochastic simulation framework.
+
+    A scenario fan is a collection of independently generated scenario realizations
+    derived from a common initial state. Each scenario represents a possible outcome
+    of the underlying stochastic process.
 
     Attributes:
         scenarios (List[NDArray[np.float64]]): Generated scenarios.
@@ -27,7 +31,12 @@ class ScenariosPayload(TypedDict):
 
 class StageManager(BaseModel):
     """
-    Manages the workflow of a stage.
+    Orchestrates the generation of a scenario fan from historical data and model estimates.
+
+    The StageManager is responsible for transforming historical time series data into
+    a stochastic representation of future uncertainty. It performs preprocessing,
+    dimensionality reduction, residual modeling, scenario generation, and reconstruction
+    back to the original feature space.
     """
 
     model_config = {"arbitrary_types_allowed": True}
@@ -68,16 +77,16 @@ class StageManager(BaseModel):
             scenarios.append(current_scenarios)
         return scenarios
 
-    def generate_scenarios_payload(
+    def generate_fan(
         self,
         X: NDArray[np.float64],
         num_trees: int,
         num_scenarios: int,
         build_in_sample_trees: bool = True,
         seed: Optional[int] = None,
-    ) -> ScenariosPayload:
+    ) -> ScenarioFanData:
         """
-        Orchestrates the scenario generation process from historical data.
+        Orchestrates the scenario fan generation process from historical data.
 
         Args:
             X (NDArray[np.float64]): Historical data.
@@ -133,7 +142,7 @@ class StageManager(BaseModel):
             sc_high = dim_reduction.inverse_transform(current_scenarios)
             sc_original = scaler.inverse_transform(sc_high)
             scenarios_high.append(sc_original)
-        results: ScenariosPayload = {
+        results: ScenarioFanData = {
             "scenarios": scenarios_high,
             "predicted_values": [row for row in estimated_original],
             "observed_values": observed_values,
