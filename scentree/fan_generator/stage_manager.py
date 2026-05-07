@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from scentree.config import explained_var
 from scentree.dim_reduction.pca import BasePCA
 from scentree.estimators.estimator_orchestrator import EstimatorController
+from scentree.io.loader import ValueRange
 from sklearn.preprocessing import StandardScaler
 from typing import List, Optional, TypedDict
 
@@ -45,7 +46,7 @@ class StageManager(BaseModel):
         self,
         residuals: NDArray[np.float64],
         estimated_values: NDArray[np.float64],
-        num_trees: int,
+        num_fans: int,
         num_scenarios: int,
         seed: Optional[int] = None,
     ) -> List[NDArray[np.float64]]:
@@ -55,7 +56,7 @@ class StageManager(BaseModel):
         Args:
             residuals(NDArray[np.float64]): Matrix containing historical residuals.
             estimated_values (NDArray[np.float64]): Estimated values.
-            num_trees (int): Number of trees to provide.
+            num_fans (int): Number of fans to provide.
             num_scenarios (int): Number of scenarios to generate the fan.
             seed (Optional[int]): Seed needed in case reproducibility is required.
 
@@ -64,7 +65,7 @@ class StageManager(BaseModel):
         """
         scenarios = []
         # For each day, generate the scenarios
-        for i_day in range(num_trees):
+        for i_day in range(num_fans):
             estimated_value = np.reshape(estimated_values[i_day, :], (1, -1))
             vector_ones = np.ones((num_scenarios, 1))
             # Transform it to a matrix. Each row is repeated
@@ -77,12 +78,28 @@ class StageManager(BaseModel):
             scenarios.append(current_scenarios)
         return scenarios
 
-    def generate_fan(
+    def clip_matrix_values(self, X: NDArray, value_ranges: Optional[List[ValueRange]]) -> NDArray:
+        """
+        Clip the values of a given matrix.
+
+        Args:
+            X (NDArray): Matrix to be clipped.
+            value_ranges (Optional[List[ValueRange]]): Range of values used to clip X.
+        """
+        X_clipped = X.copy()
+        if value_ranges is not None:
+            for i, vr in enumerate(value_ranges):
+                if vr is not None:
+                    X_clipped[:, i] = np.clip(X[:, i], vr[0], vr[1])
+        return X_clipped
+
+    def generate_scenario_fans(
         self,
         X: NDArray[np.float64],
-        num_trees: int,
+        num_fans: int,
         num_scenarios: int,
-        build_in_sample_trees: bool = True,
+        build_in_sample_fans: bool = True,
+        value_ranges: Optional[List[ValueRange]] = None,
         seed: Optional[int] = None,
     ) -> ScenarioFanData:
         """
@@ -90,19 +107,38 @@ class StageManager(BaseModel):
 
         Args:
             X (NDArray[np.float64]): Historical data.
-            num_trees (int):  Number of trees to generate.
+            num_fans (int):  Number of fans to generate.
             num_scenarios (int): Number of scenarios to generate.
-            build_in_sample_trees (bool): Whether to build in sample trees or
-                out sample trees. Default to True, meaning that in sample trees are built.
+            build_in_sample_fans (bool): Whether to build in-sample fans or
+                out-sample fans. Default to True, meaning that in sample fans are built.
+            value_ranges (Optional[List[ValueRange]]): Optional lower and upper bounds
+                for each variable in `X`.
             seed (Optional[int]): Seed needed in case reproducibility is required.
 
+        Raises:
+            ValueError:
+                - If the length of `value_ranges` does not match the number
+                  of columns in `X`.
+                - If a value range is invalid, i.e. the lower bound is
+                  greater than the upper bound.
+
         Returns:
-            ScenariosPayload:
+            ScenarioFanData:
                 A container with:
                     - scenarios: generated scenarios
                     - predicted_values: model predictions
                     - observed_values: optional observed values
         """
+        if value_ranges is not None:
+            if len(value_ranges) != X.shape[1]:
+                raise ValueError(
+                    "The length of `value_ranges` must be equal to the number of columns of `X`"
+                )
+            for i, rv in enumerate(value_ranges):
+                if rv is not None and rv[0] > rv[1]:
+                    raise ValueError(
+                        f"The first value of `value_ranges` must be greater than the second value in position {i}"
+                    )
         # Perform normalization
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
@@ -119,29 +155,30 @@ class StageManager(BaseModel):
         residuals = estimator_controller.estimate_residuals(X_reduced)
 
         # Get estimated values
-        if build_in_sample_trees:
-            estimated_values = estimator_controller.in_sample_estimation(num_trees)
-            observed_values = [row for row in X[-num_trees:, :]]
+        if build_in_sample_fans:
+            estimated_values = estimator_controller.in_sample_estimation(num_fans)
+            observed_values = [row for row in X[-num_fans:, :]]
         else:
-            estimated_values = estimator_controller.out_sample_estimation(num_trees)
+            estimated_values = estimator_controller.out_sample_estimation(num_fans)
             observed_values = None
 
-        # Create scenarios for all num_trees
+        # Create scenarios for all num_fans
         scenarios = self.get_scenarios(
             residuals,
             estimated_values,
-            num_trees,
+            num_fans,
             num_scenarios,
             seed,
         )
-        # For each tree, recover the data in the high dimensional space
+        # For each fan, recover the data in the high dimensional space
         scenarios_high = []
         estimated_values_high = dim_reduction.inverse_transform(estimated_values)
         estimated_original = scaler.inverse_transform(estimated_values_high)
         for current_scenarios in scenarios:
             sc_high = dim_reduction.inverse_transform(current_scenarios)
             sc_original = scaler.inverse_transform(sc_high)
-            scenarios_high.append(sc_original)
+            sc_original_clipped = self.clip_matrix_values(sc_original, value_ranges)
+            scenarios_high.append(sc_original_clipped)
         results: ScenarioFanData = {
             "scenarios": scenarios_high,
             "predicted_values": [row for row in estimated_original],
