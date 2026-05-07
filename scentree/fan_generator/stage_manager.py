@@ -137,7 +137,8 @@ class StageManager(BaseModel):
             for i, rv in enumerate(value_ranges):
                 if rv is not None and rv[0] > rv[1]:
                     raise ValueError(
-                        f"The first value of `value_ranges` must be greater than the second value in position {i}"
+                        f"""The first value of `value_ranges` must be greater than the
+                        second value in position {i}"""
                     )
         # Perform normalization
         scaler = StandardScaler()
