@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from scentree.config import explained_var
 from scentree.dim_reduction.pca import BasePCA
 from scentree.estimators.estimator_orchestrator import EstimatorController
-from scentree.io.loader import ValueRange
+from scentree.io.loader import Bounds
 from sklearn.preprocessing import StandardScaler
 from typing import List, Optional, TypedDict
 
@@ -78,13 +78,13 @@ class StageManager(BaseModel):
             scenarios.append(current_scenarios)
         return scenarios
 
-    def clip_matrix_values(self, X: NDArray, value_ranges: Optional[List[ValueRange]]) -> NDArray:
+    def clip_matrix_values(self, X: NDArray, value_ranges: Optional[List[Bounds]]) -> NDArray:
         """
         Clip the values of a given matrix.
 
         Args:
             X (NDArray): Matrix to be clipped.
-            value_ranges (Optional[List[ValueRange]]): Range of values used to clip X.
+            value_ranges (Optional[List[Bounds]]): Bounds used to clip X.
         """
         X_clipped = X.copy()
         if value_ranges is not None:
@@ -99,7 +99,7 @@ class StageManager(BaseModel):
         num_fans: int,
         num_scenarios: int,
         build_in_sample_fans: bool = True,
-        value_ranges: Optional[List[ValueRange]] = None,
+        value_ranges: Optional[List[Bounds]] = None,
         seed: Optional[int] = None,
     ) -> ScenarioFanData:
         """
@@ -111,7 +111,7 @@ class StageManager(BaseModel):
             num_scenarios (int): Number of scenarios to generate.
             build_in_sample_fans (bool): Whether to build in-sample fans or
                 out-sample fans. Default to True, meaning that in sample fans are built.
-            value_ranges (Optional[List[ValueRange]]): Optional lower and upper bounds
+            value_ranges (Optional[List[Bounds]]): Optional lower and upper bounds
                 for each variable in `X`.
             seed (Optional[int]): Seed needed in case reproducibility is required.
 
