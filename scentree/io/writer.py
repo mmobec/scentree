@@ -4,7 +4,7 @@ import numpy as np
 from datetime import datetime
 from numpy.typing import NDArray
 from pathlib import Path
-from scentree.io import MapColsNamesStages
+from scentree.io import DatasetMappings
 from scentree.tree_construction import ScenarioTrees
 from typing import List, Union
 
@@ -18,7 +18,7 @@ def save_json(
     predicted_value: List[NDArray],
     observed_value: Union[List[NDArray], None],
     scenario_trees: ScenarioTrees,
-    mapping_datasets_columns: MapColsNamesStages,
+    mapping_datasets_columns: DatasetMappings,
     multiple_files: bool = False,
 ) -> None:
     """
@@ -38,7 +38,7 @@ def save_json(
             or None if not available.
         scenario_trees (ScenarioTrees): List of scenario tree. Each position contains a
             scenario tree.
-        mapping_datasets_columns (MapColsNamesStages): Mapping between dataset names,
+        mapping_datasets_columns (DatasetMappings): Mapping between dataset names,
             their column indices and their stages.
         multiple_files (bool): If True, results are saved in separate files
             (not yet implemented). If False, all results are stored in a
