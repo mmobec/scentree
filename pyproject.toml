@@ -6,20 +6,26 @@ build-backend = "setuptools.build_meta"
 name = "scentree"
 version = "0.0.1"
 description = "A Python package to generate scenario trees for multi-stage stochastic programming problems."
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
 authors = [
     {name = "Cristian Pachón García", email = "cristian.pachon@upc.edu"},
     {name = "Albert Solà Vilalta", email = "albert.sola.vilalta@upc.edu"},
-    {name = "F.-Javier Heredia", email="f.javier.heredia@upc.edu"}
+    {name = "F.-Javier Heredia", email="f.javier.heredia@upc.edu"},
 ]
 maintainers = [
     {name = "Cristian Pachón García", email = "cristian.pachon@upc.edu"},
     {name = "Albert Solà Vilalta", email = "albert.sola.vilalta@upc.edu"},
 ]
-keywords = ["scenario tree", "forecasting", "ML", "stochastic optimisation"]
+keywords = [
+    "forecasting",
+    "machine-learning",
+    "scenario-tree",
+    "stochastic-optimization",
+    "stochastic-programming",
+]
 classifiers = [
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"
+    "License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)"
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -34,11 +40,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "black>=23.11,<24",
+    "build>=1.2",
     "flake8>=6.1,<7",
     "flake8-pyproject>=1.2",
     "ipykernel>=6.30,<7",
     "mypy>=1.8,<2",
     "pdbpp>=0.11,<0.12",
+    "twine>=6.0",
 ]
 
 [tool.setuptools]
