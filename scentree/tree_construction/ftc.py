@@ -4,6 +4,7 @@ from numpy.typing import NDArray
 from pydantic import BaseModel, Field, model_validator, PrivateAttr
 from scentree.tree_construction import Node, NodeScenarioMap, ScenarioTrees, Tree
 from scipy.spatial import distance_matrix
+from tqdm.auto import tqdm
 from typing import Dict, List, Optional, Self, Tuple, TypedDict
 
 
@@ -722,7 +723,12 @@ class FTC(BaseModel):
         # Get the initial column position and the last column position of the data for each stage
         map_stages_columns = self.mapping_stages_columns()
         stage_ids_with_initial_stage = list(map_stages_columns.keys())
-        for i_tree in range(self.num_trees):
+        iterator = tqdm(
+            range(self.num_trees),
+            desc="Building trees",
+            disable=False,
+        )
+        for i_tree in iterator:
             graph: Graph = {"edges": [], "ids": {}}
             representatives: Dict[int, List[int]] = {}
             Scen0 = np.full(
