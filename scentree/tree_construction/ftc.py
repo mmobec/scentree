@@ -683,12 +683,12 @@ class FTC(BaseModel):
         return nodes
 
     def generate_scenario_trees(
-        self, r: float, initial_stage_id_to_cluster: Optional[int] = None
+        self, r: float = 2.0, initial_stage_id_to_cluster: Optional[int] = None
     ) -> ScenarioTrees:
         """Build the scenario trees.
 
         Args:
-            r (float): Exponent used in the weighted norm computation.
+            r (float): Exponent used in the weighted norm computation. Default to 2.
             initial_stage_id_to_cluster (Optional[int]): Stage ID from which clustering starts.
                 Default to None, which means that no clustering is performed.
 
