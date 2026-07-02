@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from scentree.estimators.ridge import RidgeEstimator
 from scentree.estimators.var import VarEstimator
 from sklearn.model_selection import BaseCrossValidator
+from tqdm.auto import tqdm
 from typing import Any, cast, ClassVar, List, Optional, Protocol, Self, Type, TypeVar, Union
 
 R = TypeVar("R", bound="EstimatorController")
@@ -150,7 +151,13 @@ class EstimatorController(BaseModel):
         """
         best_score = None
         estimator_chosen = None
-        for EstimatorClass in self.estimator_classes:
+        iterator = tqdm(
+            self.estimator_classes,
+            desc="Evaluating estimators",
+            disable=False,
+        )
+        for EstimatorClass in iterator:
+            iterator.set_postfix(estimator=EstimatorClass.__name__)
             # Instantiate the estimator
             estimator = EstimatorClass()
             estimator.fit_cv(X=X, cv=cv)
