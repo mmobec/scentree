@@ -52,6 +52,12 @@ dev = [
     "twine>=6.0",
 ]
 
+docs = [
+    "mkdocs>=1.5,<2",
+    "mkdocstrings[python]>=0.25,<1",
+    "mkdocs-material>=9,<10",
+]
+
 [project.urls]
 Homepage = "https://github.com/mmobec/scentree-gen"
 Repository = "https://github.com/mmobec/scentree-gen"
