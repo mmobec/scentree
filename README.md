@@ -1,3 +1,5 @@
+![Scentree logo](https://raw.githubusercontent.com/mmobec/scentree-gen/main/docs/assets/card.svg)
+
 # About
 
 `scentree` is a Python framework for generating scenario trees for multistage stochastic programming. It provides methods for generating a scenario fan using statistical models based on multivariate time series and machine learning techniques. The resulting scenario tree is then constructed using scenario reduction algorithms.
@@ -14,7 +16,7 @@ pip install scentree
 The package will be available on conda-forge soon.
 
 # How to use it
-Visit the official documentation page for more details on how to use it.
+Visit [the official documentation page] (https://scentree.readthedocs.io/en/latest/) for more details on how to use it.
 
 # Citation
 ```bibtex
