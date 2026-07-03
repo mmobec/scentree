@@ -68,6 +68,7 @@ test = [
 
 [project.urls]
 Homepage = "https://github.com/mmobec/scentree-gen"
+Documentation = "https://scentree.readthedocs.io/"
 Repository = "https://github.com/mmobec/scentree-gen"
 Issues = "https://github.com/mmobec/scentree-gen/issues"
 
