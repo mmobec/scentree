@@ -1,0 +1,100 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1000 1000"
+>
+  <defs>
+    <style type="text/css">
+      :root {
+        --blue-soft: oklch(97% 0.014 254.604);
+        --blue-medium: oklch(88.2% 0.059 254.128);
+        --blue-hard: oklch(70.7% 0.165 254.624);
+        --gray-hard: oklch(37.2% 0.044 257.287);
+      }
+    </style>
+  </defs>
+
+  <g id="masks">
+    <mask id="node-masks">
+      <rect x="0" y="0" width="1000" height="1000" fill="white" />
+      <circle
+        id="node-mask"
+        cx="-100"
+        cy="550"
+        r="60"
+        fill="black"
+      />
+
+      <use href="#node-mask" x="250" />
+      <use href="#node-mask" x="600" y="-300" />
+      <use href="#node-mask" x="600" />
+      <use href="#node-mask" x="600" y="300" />
+      <use href="#node-mask" x="950" y="-300" />
+      <use href="#node-mask" x="950" y="-120" />
+      <use href="#node-mask" x="950" y="120" />
+      <use href="#node-mask" x="950" y="300" />
+    </mask>
+
+    <mask id="frame">
+      <rect width="1000" height="1000" fill="black" />
+      <rect width="1000" height="1000" rx="120" fill="white" />
+    </mask>
+  </g>
+
+  <g id="functions" mask="url(#frame)">
+    <rect
+      width="1000"
+      height="1000"
+      rx="120"
+      stroke="var(--blue-hard)"
+      fill="white"
+      stroke-width="7px"
+    />
+    <path
+      id="function"
+      stroke-width="3px"
+      d="M -15,430
+        Q 117,117 234,391
+        T 488,310 781,59 1015,98
+        V 1000
+        H -15
+        Z"
+      />
+    <use href="#function" fill="var(--blue-hard)" stroke="var(--blue-hard)" />
+    <use href="#function" x="5" y="100" fill="var(--blue-medium)" stroke="var(--blue-soft)" />
+    <use href="#function" x="10" y="300" fill="var(--blue-soft)" stroke="var(--blue-hard)" />
+  </g>
+
+  <g id="tree">
+    <g id="edges" stroke="var(--gray-hard)" stroke-width="7px" mask="url(#node-masks)">
+      <line x1="150" y1="550" x2="500" y2="250" />
+      <line x1="150" y1="550" x2="500" y2="550" />
+      <line x1="150" y1="550" x2="500" y2="850" />
+      <line x1="500" y1="250" x2="850" y2="250" />
+      <line x1="500" y1="550" x2="850" y2="430" />
+      <line x1="500" y1="550" x2="850" y2="670" />
+      <line x1="500" y1="850" x2="850" y2="850" />
+    </g>
+
+    <g id="nodes">
+      <circle
+        id="node"
+        cx="-100"
+        cy="550"
+        r="60"
+        stroke="var(--gray-hard)"
+        stroke-width="10px"
+        fill="var(--gray-hard)"
+        fill-opacity="0.5"
+      />
+
+      <use href="#node" x="250" />
+      <use href="#node" x="600" y="-300" />
+      <use href="#node" x="600" />
+      <use href="#node" x="600" y="300" />
+      <use href="#node" x="950" y="-300" />
+      <use href="#node" x="950" y="-120" />
+      <use href="#node" x="950" y="120" />
+      <use href="#node" x="950" y="300" />
+    </g>
+  </g>
+</svg>
