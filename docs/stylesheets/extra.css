@@ -1,0 +1,6 @@
+:root  > * {
+  --md-primary-fg-color: oklch(70.7% 0.165 254.624);
+  --md-primary-fg-color--light: oklch(88.2% 0.059 254.128);
+  --md-primary-fg-color--dark: oklch(42.4% 0.199 265.638);
+  --md-accent-fg-color: var(--md-primary-fg-color--dark);
+}
