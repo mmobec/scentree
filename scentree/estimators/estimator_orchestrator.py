@@ -2,6 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel
 from scentree.estimators.ridge import RidgeEstimator
+from scentree.estimators.svr import SVREstimator
 from scentree.estimators.var import VarEstimator
 from sklearn.model_selection import BaseCrossValidator
 from tqdm.auto import tqdm
@@ -114,7 +115,7 @@ class EstimatorController(BaseModel):
         best_estimator (Optional[Any]): The best estimator.
     """
 
-    estimator_classes: ClassVar[List[Type]] = [RidgeEstimator, VarEstimator]
+    estimator_classes: ClassVar[List[Type]] = [RidgeEstimator, SVREstimator, VarEstimator]
     best_estimator: Optional[Any] = None
 
     def get_score(self, X: NDArray[np.float64], estimator: EstimatorProtocol) -> float:

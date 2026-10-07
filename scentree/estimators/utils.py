@@ -8,6 +8,11 @@ HYPERPARAMETERS_SPACE: Dict[str, Dict[str, List[Any]]] = {
         "max_iter": [100, 200, 300, 500, 1000],
     },
     "VAR": {"maxlags": [2, 5, 7, 10], "trend": ["n"]},
+    "MultiOutputSVR": {
+        "C": [0.1, 1, 10, 100, 1000],
+        "epsilon": [0.01, 0.05, 0.1, 0.2, 0.5],
+        "gamma": ["scale", "auto", 0.001, 0.01, 0.1, 1],
+    },
 }
 
 
