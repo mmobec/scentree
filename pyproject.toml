@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scentree"
-version = "0.0.5"
+version = "0.0.6"
 description = "A Python package to generate scenario trees for multi-stage stochastic programming problems."
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
@@ -18,11 +18,12 @@ maintainers = [
     {name = "Albert Solà Vilalta", email = "albert.sola.vilalta@upc.edu"},
 ]
 keywords = [
-    "forecasting",
-    "machine-learning",
     "scenario-tree",
-    "stochastic-optimization",
-    "stochastic-programming",
+    "multistage-stochastic-programming",
+    "uncertainty-estimation",
+    "machine-learning",
+    "multivariate-time-series-models",
+    "forecasting",
 ]
 classifiers = [
     "License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)",
@@ -68,7 +69,7 @@ test = [
 
 [project.urls]
 Homepage = "https://github.com/mmobec/scentree"
-Documentation = "https://scentree.readthedocs.io/"
+Documentation = "https://scentree.readthedocs.io"
 Repository = "https://github.com/mmobec/scentree"
 Issues = "https://github.com/mmobec/scentree/issues"
 
@@ -78,6 +79,9 @@ include-package-data = true
 [tool.setuptools.packages.find]
 include = ["scentree*"]
 where = ["."]
+
+[tool.setuptools.package-data]
+scentree = ["data/*.csv"]
 
 [tool.black]
 line-length = 100
