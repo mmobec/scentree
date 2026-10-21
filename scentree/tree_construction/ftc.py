@@ -520,6 +520,7 @@ class FTC(BaseModel):
         Scen0: NDArray[np.float64],
         prob_scenarios_stages: NDArray[np.float64],
         distance_stage: NDArray[np.float64],
+        random_generator: np.random.Generator,
     ) -> None:
         """Update a whole stage so that the norm is lower than the treshold.
 
@@ -535,10 +536,12 @@ class FTC(BaseModel):
             prob_scenarios_stages (NDArray[np.float64]): Matrix containing the probability of each
                 scenario at each stage.
             distance_stage: (NDArray[np.float64]): Matrix distance for the given stage_id.
+            random_generator (np.random.Generator): NumPy random number generator
+                used for stochastic operations.
         """
         # Select a cluster with more than 1 scenario
         clusters = representatives[stage_id]
-        clusters_permutated = np.random.permutation(clusters)
+        clusters_permutated = random_generator.permutation(clusters)
         found = False
         i = 0
         total_clusters = clusters_permutated.shape[0]
@@ -684,7 +687,10 @@ class FTC(BaseModel):
         return nodes
 
     def generate_scenario_trees(
-        self, r: float = 2.0, initial_stage_id_to_cluster: Optional[int] = None
+        self,
+        r: float = 2.0,
+        initial_stage_id_to_cluster: Optional[int] = None,
+        seed: Optional[int] = None,
     ) -> ScenarioTrees:
         """Build the scenario trees.
 
@@ -692,6 +698,7 @@ class FTC(BaseModel):
             r (float): Exponent used in the weighted norm computation. Default to 2.
             initial_stage_id_to_cluster (Optional[int]): Stage ID from which clustering starts.
                 Default to None, which means that no clustering is performed.
+            seed (Optional[int]): Seed needed in case reproducibility is required.
 
         Raises:
             ValueError: If `initial_stage_id_to_cluster` is not a valid stage_id.
@@ -718,6 +725,7 @@ class FTC(BaseModel):
         if r <= 0:
             raise ValueError("`r` must be greater than 0")
         # Initial parameters
+        rng = np.random.default_rng(seed)
         results: ScenarioTrees = []
         num_random_variables = sum(self.num_variables_per_stage)
         # Get the initial column position and the last column position of the data for each stage
@@ -896,6 +904,7 @@ class FTC(BaseModel):
                             Scen0,
                             prob_scenarios_stages,
                             distance_stage,
+                            rng,
                         )
                         # Compute the norm of the stage
                         stage_norm = self.compute_delta_norm_tree(
