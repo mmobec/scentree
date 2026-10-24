@@ -5,7 +5,7 @@ from datetime import datetime
 from numpy.typing import NDArray
 from pathlib import Path
 from scentree.io import DatasetMappings
-from scentree.tree_construction import ScenarioTrees
+from scentree.tree_construction import NACFormulation
 from tqdm.auto import tqdm
 from typing import List, Union
 
@@ -17,7 +17,7 @@ def save_json(
     num_stages: int,
     predicted_value: List[NDArray],
     observed_value: Union[List[NDArray], None],
-    scenario_trees: ScenarioTrees,
+    scenario_trees: NACFormulation,
     mapping_datasets_columns: DatasetMappings,
     in_sample_prediction: bool = True,
     multiple_files: bool = False,
@@ -36,7 +36,7 @@ def save_json(
             one per tree.
         observed_value (Union[List[NDArray], None]): List of observed values,
             or None if not available.
-        scenario_trees (ScenarioTrees): List of scenario tree. Each position contains a
+        scenario_trees (NACFormulation): List of scenario tree. Each position contains a
             scenario tree.
         mapping_datasets_columns (DatasetMappings): Mapping between dataset names,
             their column indices and their stages.

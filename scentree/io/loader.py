@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel, model_validator
-from scentree.io import DatasetMappings
+from scentree.io import DatasetMappings, StageColumnsMapping
 from typing import Dict, List, Optional, Self, Tuple
 
 
@@ -203,7 +203,7 @@ class DatasetsLoader(BaseModel):
             results = [x for st in stage_bounds for x in st]
         return results
 
-    def create_stages_columns_mapping(self) -> DatasetMappings:
+    def create_dataset_column_mapping(self) -> DatasetMappings:
         """
         Create the mapping between datasets, stages, and column positions.
 
@@ -264,4 +264,24 @@ class DatasetsLoader(BaseModel):
             for ds in self.datasets:
                 n_var += len([st for st in ds.stage_ids if st == stage_id])
             results.append(n_var)
+        return results
+
+    def create_stage_columns_mapping(self) -> StageColumnsMapping:
+        """
+        Create the mapping between the stages and the columns of the matrix
+            containing all data.
+
+        Returns:
+            StageColumnsMapping: A dictionary mapping each stage identifier to the
+                indices of its columns in the full matrix.
+
+        """
+        results: StageColumnsMapping = {}
+        unique_stage_ids = self.get_sorted_stage_ids()
+        ini_col = 0
+        for stage_id in unique_stage_ids:
+            num_cols = sum(ds.stage_ids.count(stage_id) for ds in self.datasets)
+            end_col = ini_col + num_cols
+            results[stage_id] = list(range(ini_col, end_col))
+            ini_col = end_col
         return results
