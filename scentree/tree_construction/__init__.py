@@ -54,5 +54,45 @@ class ScenarioTree(TypedDict):
     scenario_tree_data: NDArray[np.float64]
 
 
-# Collection of trees.
-ScenarioTrees = List[ScenarioTree]
+# NACFormulation as a Collection of trees.
+NACFormulation = List[ScenarioTree]
+
+# Mapping from node identifiers to parent identifiers.
+StageDict = Dict[int, int]
+
+# Mapping from node identifiers to random variable values.
+ParentDict = Dict[int, Optional[int]]
+
+# Mapping from node identifiers to scenario identifiers.
+NodeScenarios = Dict[int, List[int]]
+
+# Mapping from stage identifiers to lists of node identifiers.
+RandomVariableValue = Dict[int, Optional[NDArray[np.float64]]]
+
+# Mapping between stage identifier and the identifier of the nodes.
+StageNodesMapping = Dict[int, List[int]]
+
+# Mapping from node identifiers to their probabilities.
+NodesProbabilities = Dict[int, float]
+
+
+class SingleNodalFormulation(TypedDict):
+    """Represent a tree using a nodal formulation."""
+
+    stage: StageDict
+    parent: ParentDict
+    node_scenarios: NodeScenarios
+    random_variable_value: RandomVariableValue
+    nodes: StageNodesMapping
+    probability: NodesProbabilities
+
+
+# Nodal formulation: a list containing all nodal formulations
+NodalFormulation = List[SingleNodalFormulation]
+
+
+class TreeRepresentation(TypedDict):
+    """Represent a tree using both NAC and nodal formulations."""
+
+    nac_formulation: NACFormulation
+    nodal_formulation: NodalFormulation
