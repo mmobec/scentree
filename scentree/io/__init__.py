@@ -1,4 +1,8 @@
-from typing import List, TypedDict
+from typing import Dict, List, TypedDict
+
+
+# Mapping from stages to columns
+StageColumnsMapping = Dict[int, List[int]]
 
 
 class DatasetMapping(TypedDict):
