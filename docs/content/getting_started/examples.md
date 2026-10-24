@@ -41,7 +41,7 @@ dataset_loader = DatasetsLoader(datasets=datasets)
 full_values = dataset_loader.get_full_values()
 num_variables_per_stage = dataset_loader.get_num_variables_per_stage()
 stage_ids = dataset_loader.get_sorted_stage_ids()
-map_columns_names = dataset_loader.create_stages_columns_mapping()
+map_columns_names = dataset_loader.create_dataset_column_mapping()
 ```
 The variable `full_values` is a matrix with 50 rows and 8 columns. It is obtained by concatenating `X_a` and `X_b` column-wise. `num_variables_per_stage` is a list containing the number of random variables in each stage, while `stage_ids` is a list of unique stage identifiers. Finally, `map_columns_names` is used to filter `X_a` and `X_b` from `full_values`. For more details, see the [loader API documentation](../api/loader.md).
 
