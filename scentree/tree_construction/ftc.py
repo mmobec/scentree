@@ -2,7 +2,22 @@ import numpy as np
 from copy import copy
 from numpy.typing import NDArray
 from pydantic import BaseModel, Field, model_validator, PrivateAttr
-from scentree.tree_construction import Node, NodeScenarioMap, ScenarioTrees, Tree
+from scentree.tree_construction import (
+    NACFormulation,
+    NodalFormulation,
+    Node,
+    NodesProbabilities,
+    NodeScenarios,
+    NodeScenarioMap,
+    ParentDict,
+    RandomVariableValue,
+    SingleNodalFormulation,
+    StageDict,
+    StageNodesMapping,
+    Tree,
+    TreeRepresentation,
+)
+from scentree.io import StageColumnsMapping
 from scipy.spatial import distance_matrix
 from tqdm.auto import tqdm
 from typing import Dict, List, Optional, Self, Tuple, TypedDict
@@ -688,10 +703,11 @@ class FTC(BaseModel):
 
     def generate_scenario_trees(
         self,
+        stage_columns_mapping: StageColumnsMapping,
         r: float = 2.0,
         initial_stage_id_to_cluster: Optional[int] = None,
         seed: Optional[int] = None,
-    ) -> ScenarioTrees:
+    ) -> TreeRepresentation:
         """Build the scenario trees.
 
         Args:
@@ -726,7 +742,7 @@ class FTC(BaseModel):
             raise ValueError("`r` must be greater than 0")
         # Initial parameters
         rng = np.random.default_rng(seed)
-        results: ScenarioTrees = []
+        nac_formulation: NACFormulation = []
         num_random_variables = sum(self.num_variables_per_stage)
         # Get the initial column position and the last column position of the data for each stage
         map_stages_columns = self.mapping_stages_columns()
@@ -917,11 +933,69 @@ class FTC(BaseModel):
                         )
             self.update_graph(graph)
             tree = self.combine_tree_graph(graph, node_scenario_map)
-            results.append(
+            nac_formulation.append(
                 {
                     "tree": tree,
                     "scenario_probabilities": prob_scenarios_stages[:, -1],
                     "scenario_tree_data": Scen0,
                 }
             )
+        nodal_formulation = self.convert_to_nodal_representation(
+            stage_columns_mapping, nac_formulation
+        )
+        formulation: TreeRepresentation = {
+            "nac_formulation": nac_formulation,
+            "nodal_formulation": nodal_formulation,
+        }
+        return formulation
+
+    def convert_to_nodal_representation(
+        self,
+        stage_columns_mapping: StageColumnsMapping,
+        nac_formulation: NACFormulation,
+    ) -> NodalFormulation:
+        results = []
+        for formulation in nac_formulation:
+            graph = formulation["tree"]
+            tree_data = formulation["scenario_tree_data"]
+            prob = formulation["scenario_probabilities"]
+            sorted_graph = sorted(graph, key=lambda v: v["key"])
+            node_mapping = {v["key"]: n for n, v in enumerate(sorted_graph)}
+            stage: StageDict = {}
+            parent: ParentDict = {}
+            node_scenarios: NodeScenarios = {}
+            nodes_probabilities: NodesProbabilities = {}
+            xi: RandomVariableValue = {}
+            stage_nodes_mapping: StageNodesMapping = {}
+            for node_id, information in enumerate(sorted_graph):
+                assert information["key"][0] is not None
+                current_stage = information["key"][0]
+                stage[node_id] = current_stage
+                if information["parent_key"] is None:
+                    parent[node_id] = None
+                else:
+                    first, second = information["parent_key"]
+                    assert second is not None
+                    parent[node_id] = node_mapping[(first, second)]
+                rows = np.asarray(information["scenario_ids"]) - 1
+                node_scenarios[node_id] = information["scenario_ids"]
+                nodes_probabilities[node_id] = float(prob[rows].sum().item())
+                if current_stage in stage_nodes_mapping.keys():
+                    stage_nodes_mapping[current_stage].append(node_id)
+                else:
+                    stage_nodes_mapping[current_stage] = [node_id]
+                if stage[node_id] == 0:
+                    xi[node_id] = None
+                else:
+                    xi[node_id] = tree_data[rows[0], stage_columns_mapping[stage[node_id]]]
+
+            nodal_form: SingleNodalFormulation = {
+                "stage": stage,
+                "parent": parent,
+                "node_scenarios": node_scenarios,
+                "random_variable_value": xi,
+                "nodes": stage_nodes_mapping,
+                "probability": nodes_probabilities,
+            }
+            results.append(nodal_form)
         return results
