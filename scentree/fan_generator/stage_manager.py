@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel
-from scentree.config import explained_var
+from scentree.config import explained_var, min_number_cols_pca
 from scentree.dim_reduction.pca import BasePCA
 from scentree.estimators.estimator_orchestrator import EstimatorController
 from scentree.io.loader import Bounds
@@ -141,6 +141,7 @@ class StageManager(BaseModel):
                     - predicted_values: model predictions
                     - observed_values: optional observed values
         """
+
         if value_ranges is not None:
             if len(value_ranges) != X.shape[1]:
                 raise ValueError(
@@ -181,8 +182,16 @@ class StageManager(BaseModel):
         X_scaled = scaler.fit_transform(X)
 
         # Perform dimensionality reduction
-        dim_reduction = BasePCA()
-        X_reduced = dim_reduction.fit_auto_components(X_scaled, threshold=explained_var)
+        dim_red_performed, dim_reduction = False, None
+        if X_scaled.shape[1] >= min_number_cols_pca:
+            dim_reduction = BasePCA()
+            X_reduced = dim_reduction.fit_auto_components(
+                X_scaled,
+                threshold=explained_var,
+            )
+            dim_red_performed = True
+        else:
+            X_reduced = X_scaled.copy()
 
         # Find the best estimator
         estimator_controller = EstimatorController()
@@ -209,10 +218,16 @@ class StageManager(BaseModel):
         )
         # For each fan, recover the data in the high dimensional space
         scenarios_high = []
-        estimated_values_high = dim_reduction.inverse_transform(estimated_values)
+        if dim_red_performed and dim_reduction:
+            estimated_values_high = dim_reduction.inverse_transform(estimated_values)
+        else:
+            estimated_values_high = estimated_values.copy()
         estimated_original = scaler.inverse_transform(estimated_values_high)
         for current_scenarios in scenarios_low:
-            sc_high = dim_reduction.inverse_transform(current_scenarios)
+            if dim_red_performed and dim_reduction:
+                sc_high = dim_reduction.inverse_transform(current_scenarios)
+            else:
+                sc_high = current_scenarios.copy()
             sc_original = scaler.inverse_transform(sc_high)
             sc_original_clipped = self.clip_matrix_values(sc_original, value_ranges)
             scenarios_high.append(sc_original_clipped)
