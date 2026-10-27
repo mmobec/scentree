@@ -17,6 +17,7 @@ class VarEstimator:
     Configuration and state variables for the VAR estimator wrapper.
 
     Attributes:
+        min_variables (int): Minimum number of variables required to run the estimator.
         estimator_class (Type): The estimator class being used, here VAR from statsmodels.
         name (str): Name of the estimator class, derived from `estimator_class.__name__`.
         hyperparameters (Dict[str, Any]): Default hyperparameters for the estimator, obtained
@@ -29,6 +30,7 @@ class VarEstimator:
             Stored for reference or further computation.
     """
 
+    min_variables = 2
     estimator_class = VAR
     name = VAR.__name__
     hyperparameters = get_default_parameters(estimator_class, from_fit=True)

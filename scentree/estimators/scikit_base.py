@@ -79,7 +79,10 @@ class SklearnEstimator(BaseEstimator):
         """
         if self.estimator is None:
             raise ValueError("You must call `fit()` before `predict()`.")
-        return self.estimator.predict(X)
+        # Make sure to obtain a 2D array, i.e., a matrix.
+        num_rows = X.shape[0]
+        predictions = self.estimator.predict(X).reshape(num_rows, -1)
+        return predictions
 
     def get_params(self, deep: bool = True) -> Dict[str, Any]:
         """Return the hyperparameters of the estimator.

@@ -33,9 +33,12 @@ class SVREstimator(SklearnEstimator):
     """Wrapper for a multi-output scikit-learn `SVR` regression estimator.
 
     Args:
+        min_variables (int): Minimum number of variables required to run the estimator.
         estimator_class (Optional[Type[BaseEstimator]]): Estimator class to wrap.
             Defaults to `MultiOutputSVR`.
     """
+
+    min_variables = 1
 
     def __init__(self, estimator_class: Optional[Type[BaseEstimator]] = None):
         if estimator_class is None:
