@@ -22,7 +22,7 @@ Visit [the official documentation page](https://scentree.readthedocs.io) for mor
 
 # Examples
 
-A complete illustrative example is provided in the [Flowergirl notebook](scentree/examples/flowergirl.ipynb), which demonstrates the generation of a scenario fan, scenario tree reduction, and the formulation and solution of a multistage stochastic programming problem using Pyomo.
+A complete illustrative example is provided in the [Flowergirl notebook](https://github.com/mmobec/scentree/blob/main/scentree/examples/flowergirl.ipynb), which demonstrates the generation of a scenario fan, scenario tree reduction, and the formulation and solution of a multistage stochastic programming problem using Pyomo.
 
 To run the notebook, install the optional dependencies with:
 
